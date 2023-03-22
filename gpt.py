@@ -1,17 +1,18 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+import tiktoken
 
 # hyperparameters
-batch_size = 64  # number of independent sequences to process in parallel
-block_size = 256  # maximum context length for predictions
-max_iters = 5000
-eval_interval = 500
+batch_size = 32  # number of independent sequences to process in parallel
+block_size = 16  # maximum context length for predictions
+max_iters = 2000
+eval_interval = 250
 eval_iters = 200
-learning_rate = 3e-4
+learning_rate = 1e-3
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-n_embd = 384  # number of embedding dimensions
-n_head = 6  # number of heads in multi-head attention
+n_embd = 64  # number of embedding dimensions
+n_head = 2  # number of heads in multi-head attention
 n_layer = 6
 dropout = 0.2
 # ----------------
@@ -19,18 +20,12 @@ dropout = 0.2
 with open('input.txt', 'r', encoding='utf-8') as f:
     text = f.read()
 
-# all unique characters that occur in the text
-chars = sorted(list(set(text)))
-vocab_size = len(chars)
-# mapping from characters to integer
-stoi = {ch: i for i, ch in enumerate(chars)}
-itos = {i: ch for i, ch in enumerate(chars)}
-def encode(s): return [stoi[ch] for ch in s]
-def decode(l): return ''.join([itos[i] for i in l])
-
+# tokenizer
+encoding = tiktoken.get_encoding("p50k_base")
+vocab_size = encoding.max_token_value + 1
 
 # train and test splits
-data = torch.tensor(encode(text), dtype=torch.long)
+data = torch.tensor(encoding.encode(text), dtype=torch.long)
 n = int(0.9 * len(data))
 train_data = data[:n]
 val_data = data[n:]
@@ -217,4 +212,4 @@ for iter in range(max_iters):
 
 # generate from the model
 context = torch.zeros((1, 1), dtype=torch.long, device=device)
-print(decode(model.generate(context, max_new_tokens=500)[0].tolist()))
+print(encoding.decode(model.generate(context, max_new_tokens=100)[0].tolist()))
